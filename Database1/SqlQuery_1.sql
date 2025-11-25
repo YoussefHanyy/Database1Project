@@ -1,6 +1,6 @@
 ﻿-- =======================================================================================
 -- University HR Management System - Team 64
--- Milestone 2 Implementation
+-- Milestone 2
 -- =======================================================================================
 
 -- 2.1.a Create Database
@@ -81,6 +81,7 @@ BEGIN
     );
 
     -- Leave Table
+    -- num_days is a computed column: end_date - start_date + 1
     CREATE TABLE Leave (
         request_ID INT IDENTITY(1,1) PRIMARY KEY, 
         date_of_request DATE,
@@ -150,7 +151,7 @@ BEGIN
     CREATE TABLE Payroll (
         ID INT IDENTITY(1,1) PRIMARY KEY,
         payment_date DATE,
-        final_salary_amount DECIMAL(10,1), 
+        final_salary_amount DECIMAL(10,1),
         from_date DATE,
         to_date DATE,
         comments VARCHAR(150),
@@ -160,6 +161,7 @@ BEGIN
     );
 
     -- Attendance Table
+    -- total_duration is a computed column: check_out_time - check_in_time
     CREATE TABLE Attendance (
         attendance_ID INT IDENTITY(1,1) PRIMARY KEY,
         date DATE,
@@ -216,7 +218,7 @@ BEGIN
 END;
 GO
 
--- Execute createAllTables immediately to create the structure
+-- EXECUTE IMMEDIATELY to create table structure for following procedures/views
 EXEC createAllTables;
 GO
 
@@ -245,7 +247,6 @@ BEGIN
     DROP TABLE Employee_Phone;
     DROP TABLE Employee;
     DROP TABLE Department;
-    -- Check if holiday exists before dropping as it is created optionally later
     IF OBJECT_ID('Holiday', 'U') IS NOT NULL DROP TABLE Holiday;
 END;
 GO
@@ -335,7 +336,7 @@ WHERE A.date = DATEADD(day, -1, CAST(GETDATE() AS DATE));
 GO
 
 -- =======================================================================================
--- 2.5 f) Function Is_On_Leave (Created early as 2.3.c depends on it)
+-- 2.5 f) Function Is_On_Leave (Needed for 2.3.c)
 -- =======================================================================================
 CREATE FUNCTION Is_On_Leave 
     (@employee_ID INT, @from_date DATE, @to_date DATE) 
@@ -442,7 +443,7 @@ BEGIN
 END;
 GO
 
--- 2.3 f)
+-- 2.3 f) (Name matches PDF typo "Intitiate")
 CREATE PROC Intitiate_Attendance
 AS
 BEGIN
@@ -817,7 +818,7 @@ CREATE FUNCTION Bonus_amount
 RETURNS DECIMAL(10,2)
 AS
 BEGIN
-    DECLARE @bonus DECIMAL(10,2) = 0;
+    DECLARE @bonus_amount DECIMAL(10,2) = 0;
     DECLARE @salary DECIMAL(10,2);
     DECLARE @rate_per_hour DECIMAL(10,4); 
     DECLARE @overtime_factor DECIMAL(4,2);
@@ -841,9 +842,9 @@ BEGIN
       AND MONTH(date) = MONTH(GETDATE()) 
       AND YEAR(date) = YEAR(GETDATE());
       
-    SET @bonus = @rate_per_hour * ((@overtime_factor * @total_extra_hours) / 100.0);
+    SET @bonus_amount = @rate_per_hour * ((@overtime_factor * @total_extra_hours) / 100.0);
     
-    RETURN @bonus;
+    RETURN @bonus_amount;
 END;
 GO
 
@@ -855,13 +856,13 @@ CREATE PROC Add_Payroll
 AS
 BEGIN
     DECLARE @salary DECIMAL(10,2);
-    DECLARE @bonus DECIMAL(10,2);
+    DECLARE @bonus_amount DECIMAL(10,2);
     DECLARE @deduction DECIMAL(10,2);
     DECLARE @final_salary DECIMAL(10,2);
     
     SELECT @salary = salary FROM Employee WHERE employee_ID = @employee_ID;
     
-    SET @bonus = dbo.Bonus_amount(@employee_ID);
+    SET @bonus_amount = dbo.Bonus_amount(@employee_ID);
     
     SELECT @deduction = ISNULL(SUM(amount), 0) 
     FROM Deduction 
@@ -869,10 +870,10 @@ BEGIN
       AND status = 'pending' 
       AND date BETWEEN @from_date AND @to_date;
       
-    SET @final_salary = @salary + @bonus - @deduction;
+    SET @final_salary = @salary + @bonus_amount - @deduction;
     
     INSERT INTO Payroll (payment_date, final_salary_amount, from_date, to_date, comments, bonus_amount, deductions_amount, emp_ID)
-    VALUES (GETDATE(), @final_salary, @from_date, @to_date, 'Monthly Payroll', @bonus, @deduction, @employee_ID);
+    VALUES (GETDATE(), @final_salary, @from_date, @to_date, 'Monthly Payroll', @bonus_amount, @deduction, @employee_ID);
     
     UPDATE Deduction 
     SET status = 'finalized' 
