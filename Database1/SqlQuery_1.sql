@@ -1,28 +1,17 @@
-﻿-- =======================================================================================
--- University HR Management System - Team 64
--- Milestone 2
--- =======================================================================================
-
--- 2.1.a Create Database
-CREATE DATABASE University_HR_ManagementSystem_Team_64;
+﻿CREATE DATABASE University_HR_ManagementSystem_Team_64;
 GO
 
 USE University_HR_ManagementSystem_Team_64;
 GO
 
--- =======================================================================================
--- 2.1.b Create All Tables Procedure
--- =======================================================================================
 CREATE PROC createAllTables
 AS
 BEGIN
-    -- Department Table
     CREATE TABLE Department (
         name VARCHAR(50) PRIMARY KEY,
         building_location VARCHAR(50)
     );
 
-    -- Employee Table
     CREATE TABLE Employee (
         employee_ID INT IDENTITY(1,1) PRIMARY KEY,
         first_name VARCHAR(50),
@@ -46,14 +35,12 @@ BEGIN
         dept_name VARCHAR(50) FOREIGN KEY REFERENCES Department(name)
     );
 
-    -- Employee_Phone Table
     CREATE TABLE Employee_Phone (
         emp_ID INT FOREIGN KEY REFERENCES Employee(employee_ID),
         phone_num CHAR(11),
         PRIMARY KEY (emp_ID, phone_num)
     );
 
-    -- Role Table
     CREATE TABLE Role (
         role_name VARCHAR(50) PRIMARY KEY,
         title VARCHAR(50),
@@ -66,22 +53,18 @@ BEGIN
         accidental_balance INT
     );
 
-    -- Employee_Role Table
     CREATE TABLE Employee_Role (
         emp_ID INT FOREIGN KEY REFERENCES Employee(employee_ID),
         role_name VARCHAR(50) FOREIGN KEY REFERENCES Role(role_name),
         PRIMARY KEY (emp_ID, role_name)
     );
 
-    -- Role_existsIn_Department Table
     CREATE TABLE Role_existsIn_Department (
         department_name VARCHAR(50) FOREIGN KEY REFERENCES Department(name),
         Role_name VARCHAR(50) FOREIGN KEY REFERENCES Role(role_name),
         PRIMARY KEY (department_name, Role_name)
     );
 
-    -- Leave Table
-    -- num_days is a computed column: end_date - start_date + 1
     CREATE TABLE Leave (
         request_ID INT IDENTITY(1,1) PRIMARY KEY, 
         date_of_request DATE,
@@ -91,7 +74,6 @@ BEGIN
         final_approval_status VARCHAR(50) DEFAULT 'pending' CHECK (final_approval_status IN ('approved', 'rejected', 'pending'))
     );
 
-    -- Annual_Leave Table
     CREATE TABLE Annual_Leave (
         request_ID INT FOREIGN KEY REFERENCES Leave(request_ID),
         emp_ID INT FOREIGN KEY REFERENCES Employee(employee_ID),
@@ -99,14 +81,12 @@ BEGIN
         PRIMARY KEY (request_ID)
     );
 
-    -- Accidental_Leave Table
     CREATE TABLE Accidental_Leave (
         request_ID INT FOREIGN KEY REFERENCES Leave(request_ID),
         emp_ID INT FOREIGN KEY REFERENCES Employee(employee_ID),
         PRIMARY KEY (request_ID)
     );
 
-    -- Medical_Leave Table
     CREATE TABLE Medical_Leave (
         request_ID INT FOREIGN KEY REFERENCES Leave(request_ID),
         insurance_status BIT,
@@ -116,14 +96,12 @@ BEGIN
         PRIMARY KEY (request_ID)
     );
 
-    -- Unpaid_Leave Table
     CREATE TABLE Unpaid_Leave (
         request_ID INT FOREIGN KEY REFERENCES Leave(request_ID),
         Emp_ID INT FOREIGN KEY REFERENCES Employee(employee_ID),
         PRIMARY KEY (request_ID)
     );
 
-    -- Compensation_Leave Table
     CREATE TABLE Compensation_Leave (
         request_ID INT FOREIGN KEY REFERENCES Leave(request_ID),
         reason VARCHAR(50),
@@ -133,7 +111,6 @@ BEGIN
         PRIMARY KEY (request_ID)
     );
 
-    -- Document Table
     CREATE TABLE Document (
         document_ID INT IDENTITY(1,1) PRIMARY KEY,
         type VARCHAR(50),
@@ -144,10 +121,9 @@ BEGIN
         status VARCHAR(50) CHECK (status IN ('valid', 'expired')),
         emp_ID INT FOREIGN KEY REFERENCES Employee(employee_ID),
         medical_ID INT FOREIGN KEY REFERENCES Medical_Leave(request_ID),
-        unpaid_ID INT FOREIGN KEY REFERENCES Unpaid_Leave(request_ID),
+        unpaid_ID INT FOREIGN KEY REFERENCES Unpaid_Leave(request_ID)
     );
 
-    -- Payroll Table
     CREATE TABLE Payroll (
         ID INT IDENTITY(1,1) PRIMARY KEY,
         payment_date DATE,
@@ -160,8 +136,6 @@ BEGIN
         emp_ID INT FOREIGN KEY REFERENCES Employee(employee_ID)
     );
 
-    -- Attendance Table
-    -- total_duration is a computed column: check_out_time - check_in_time
     CREATE TABLE Attendance (
         attendance_ID INT IDENTITY(1,1) PRIMARY KEY,
         date DATE,
@@ -178,7 +152,6 @@ BEGIN
         emp_ID INT FOREIGN KEY REFERENCES Employee(employee_ID)
     );
 
-    -- Deduction Table
     CREATE TABLE Deduction (
         deduction_ID INT IDENTITY(1,1) PRIMARY KEY,
         emp_ID INT FOREIGN KEY REFERENCES Employee(employee_ID),
@@ -190,7 +163,6 @@ BEGIN
         attendance_ID INT FOREIGN KEY REFERENCES Attendance(attendance_ID)
     );
 
-    -- Performance Table
     CREATE TABLE Performance (
         performance_ID INT IDENTITY(1,1) PRIMARY KEY,
         rating INT CHECK (rating BETWEEN 1 AND 5),
@@ -199,7 +171,6 @@ BEGIN
         emp_ID INT FOREIGN KEY REFERENCES Employee(employee_ID)
     );
 
-    -- Employee_Replace_Employee Table
     CREATE TABLE Employee_Replace_Employee (
         Table_ID INT IDENTITY(1,1) PRIMARY KEY, 
         Emp1_ID INT FOREIGN KEY REFERENCES Employee(employee_ID),
@@ -208,7 +179,6 @@ BEGIN
         to_date DATE
     );
 
-    -- Employee_Approve_Leave Table
     CREATE TABLE Employee_Approve_Leave (
         Emp1_ID INT FOREIGN KEY REFERENCES Employee(employee_ID),
         Leave_ID INT FOREIGN KEY REFERENCES Leave(request_ID),
@@ -218,13 +188,9 @@ BEGIN
 END;
 GO
 
--- EXECUTE IMMEDIATELY to create table structure for following procedures/views
 EXEC createAllTables;
 GO
 
--- =======================================================================================
--- 2.1.c Drop All Tables Procedure
--- =======================================================================================
 CREATE PROC dropAllTables
 AS
 BEGIN
@@ -251,9 +217,6 @@ BEGIN
 END;
 GO
 
--- =======================================================================================
--- 2.1.d Drop All Procedures, Functions, Views Procedure
--- =======================================================================================
 CREATE PROC dropAllProceduresFunctionsViews
 AS
 BEGIN
@@ -279,14 +242,9 @@ BEGIN
 END;
 GO
 
--- =======================================================================================
--- 2.1.e Clear All Tables Procedure
--- =======================================================================================
--- 2.1.e Clear All Tables
 CREATE PROC clearAllTables
 AS
 BEGIN
-    -- 1. Delete from Child Tables (contain Foreign Keys)
     DELETE FROM Employee_Approve_Leave;
     DELETE FROM Employee_Replace_Employee;
     DELETE FROM Performance;
@@ -300,33 +258,24 @@ BEGIN
     DELETE FROM Accidental_Leave;
     DELETE FROM Annual_Leave;
     
-    -- 2. Delete from "Middle" Tables (both Parent and Child)
     DELETE FROM Leave;
     DELETE FROM Role_existsIn_Department;
     DELETE FROM Employee_Role;
     DELETE FROM Employee_Phone;
     
-    -- 3. Delete from Parent Tables (referenced by others)
     DELETE FROM Employee;
     DELETE FROM Role;
     DELETE FROM Department;
     
-    -- 4. Optional: Holiday table (if exists)
     IF OBJECT_ID('Holiday', 'U') IS NOT NULL DELETE FROM Holiday;
 END;
 GO
 
--- =======================================================================================
--- 2.2 Views
--- =======================================================================================
-
--- 2.2 a)
 CREATE VIEW allEmployeeProfiles AS
 SELECT employee_ID, first_name, last_name, gender, email, address, years_of_experience, official_day_off, type_of_contract, employment_status, annual_balance, accidental_balance 
 FROM Employee;
 GO
 
--- 2.2 b)
 CREATE VIEW NoEmployeeDept AS
 SELECT D.name AS department_name, COUNT(E.employee_ID) AS number_of_employees 
 FROM Employee E 
@@ -334,7 +283,6 @@ RIGHT OUTER JOIN Department D ON E.dept_name = D.name
 GROUP BY D.name;
 GO
 
--- 2.2 c)
 CREATE VIEW allPerformance AS
 SELECT P.performance_ID, P.rating, P.comments, P.semester, E.employee_ID, E.first_name, E.last_name, E.dept_name 
 FROM Performance P 
@@ -342,7 +290,6 @@ INNER JOIN Employee E ON P.emp_ID = E.employee_ID
 WHERE P.semester LIKE 'W%';
 GO
 
--- 2.2 d)
 CREATE VIEW allRejectedMedicals AS
 SELECT ML.request_ID, ML.type, ML.insurance_status, ML.disability_details, L.start_date, L.end_date, L.num_days, L.date_of_request, E.employee_ID, E.first_name, E.last_name, E.dept_name 
 FROM Medical_Leave ML 
@@ -351,7 +298,6 @@ INNER JOIN Employee E ON ML.Emp_ID = E.employee_ID
 WHERE L.final_approval_status = 'rejected';
 GO
 
--- 2.2 e)
 CREATE VIEW allEmployeeAttendance AS
 SELECT A.attendance_ID, A.date, A.check_in_time, A.check_out_time, A.total_duration, A.status, E.employee_ID, E.first_name, E.last_name, E.dept_name, E.type_of_contract 
 FROM Attendance A 
@@ -359,9 +305,6 @@ INNER JOIN Employee E ON A.emp_ID = E.employee_ID
 WHERE A.date = DATEADD(day, -1, CAST(GETDATE() AS DATE));
 GO
 
--- =======================================================================================
--- 2.5 f) Function Is_On_Leave (Needed for 2.3.c)
--- =======================================================================================
 CREATE FUNCTION Is_On_Leave 
     (@employee_ID INT, @from_date DATE, @to_date DATE) 
 RETURNS BIT
@@ -390,11 +333,6 @@ BEGIN
 END;
 GO
 
--- =======================================================================================
--- 2.3 Admin Procedures
--- =======================================================================================
-
--- 2.3 a)
 CREATE PROC Update_Status_Doc
 AS
 BEGIN
@@ -405,7 +343,6 @@ BEGIN
 END;
 GO
 
--- 2.3 b)
 CREATE PROC Remove_Deductions
 AS
 BEGIN
@@ -418,7 +355,6 @@ BEGIN
 END;
 GO
 
--- 2.3 c)
 CREATE PROC Update_Employment_Status
     @Employee_ID INT
 AS
@@ -442,7 +378,6 @@ BEGIN
 END;
 GO
 
--- 2.3 d)
 CREATE PROC Create_Holiday
 AS
 BEGIN
@@ -455,7 +390,6 @@ BEGIN
 END;
 GO
 
--- 2.3 e)
 CREATE PROC Add_Holiday
     @holiday_name VARCHAR(50),
     @from_date DATE,
@@ -467,7 +401,6 @@ BEGIN
 END;
 GO
 
--- 2.3 f) (Name matches PDF typo "Intitiate")
 CREATE PROC Intitiate_Attendance
 AS
 BEGIN
@@ -483,7 +416,6 @@ BEGIN
 END;
 GO
 
--- 2.3 g)
 CREATE PROC Update_Attendance
     @Employee_id INT,
     @check_in_time TIME,
@@ -510,7 +442,6 @@ BEGIN
 END;
 GO
 
--- 2.3 h)
 CREATE PROC Remove_Holiday
 AS
 BEGIN
@@ -530,7 +461,6 @@ BEGIN
 END;
 GO
 
--- 2.3 i)
 CREATE PROC Remove_DayOff
     @Employee_id INT
 AS
@@ -551,7 +481,6 @@ BEGIN
 END;
 GO
 
--- 2.3 j)
 CREATE PROC Remove_Approved_Leaves
     @Employee_id INT
 AS
@@ -579,7 +508,6 @@ BEGIN
 END;
 GO
 
--- 2.3 k)
 CREATE PROC Replace_employee
     @Emp1_ID INT,
     @Emp2_ID INT, 
@@ -592,11 +520,6 @@ BEGIN
 END;
 GO
 
--- =======================================================================================
--- 2.4 HR Procedures
--- =======================================================================================
-
--- 2.4 a)
 CREATE FUNCTION HRLoginValidation 
     (@employee_ID INT, @password VARCHAR(50))
 RETURNS BIT
@@ -617,7 +540,6 @@ BEGIN
 END;
 GO
 
--- 2.4 b)
 CREATE PROC HR_approval_an_acc 
     @request_ID INT, @HR_ID INT
 AS
@@ -675,7 +597,6 @@ BEGIN
 END;
 GO
 
--- 2.4 c)
 CREATE PROC HR_approval_unpaid 
     @request_ID INT, @HR_ID INT
 AS
@@ -692,7 +613,6 @@ BEGIN
 END;
 GO
 
--- 2.4 d)
 CREATE PROC HR_approval_comp 
     @request_ID INT, @HR_ID INT
 AS
@@ -714,7 +634,6 @@ BEGIN
 END;
 GO
 
--- 2.4 e)
 CREATE PROC Deduction_hours 
     @employee_ID INT
 AS
@@ -750,7 +669,6 @@ BEGIN
 END;
 GO
 
--- 2.4 f)
 CREATE PROC Deduction_days 
     @employee_ID INT
 AS
@@ -790,7 +708,6 @@ BEGIN
 END;
 GO
 
--- 2.4 g)
 CREATE PROC Deduction_unpaid 
     @employee_ID INT
 AS
@@ -836,7 +753,6 @@ BEGIN
 END;
 GO
 
--- 2.4 h)
 CREATE FUNCTION Bonus_amount
     (@employee_ID INT) 
 RETURNS DECIMAL(10,2)
@@ -872,7 +788,6 @@ BEGIN
 END;
 GO
 
--- 2.4 i)
 CREATE PROC Add_Payroll 
     @employee_ID INT, 
     @from_date DATE, 
@@ -907,11 +822,6 @@ BEGIN
 END;
 GO
 
--- =======================================================================================
--- 2.5 Employee Procedures
--- =======================================================================================
-
--- 2.5 a)
 CREATE FUNCTION EmployeeLoginValidation 
     (@employee_ID INT, @password VARCHAR(50)) 
 RETURNS BIT
@@ -924,7 +834,6 @@ BEGIN
 END;
 GO
 
--- 2.5 b)
 CREATE FUNCTION MyPerformance 
     (@employee_ID INT, @semester CHAR(3)) 
 RETURNS TABLE 
@@ -936,7 +845,6 @@ RETURN (
 );
 GO
 
--- 2.5 c)
 CREATE FUNCTION MyAttendance 
     (@employee_ID INT) 
 RETURNS TABLE 
@@ -952,7 +860,6 @@ RETURN (
 );
 GO
 
--- 2.5 d)
 CREATE FUNCTION Last_month_payroll 
     (@employee_ID INT) 
 RETURNS TABLE 
@@ -966,22 +873,20 @@ RETURN (
 );
 GO
 
--- 2.5 e)
 CREATE FUNCTION Deductions_Attendance 
-    (@employee_ID INT, @target_month INT) 
+    (@employee_ID INT, @month INT) 
 RETURNS TABLE 
 AS 
 RETURN (
     SELECT D.deduction_ID, D.emp_ID, D.date, D.amount, D.type, D.status, D.unpaid_ID, D.attendance_ID 
     FROM Deduction D 
     WHERE D.emp_ID = @employee_ID 
-      AND MONTH(D.date) = @target_month 
+      AND MONTH(D.date) = @month 
       AND YEAR(D.date) = YEAR(GETDATE()) 
       AND D.type IN ('missing_hours', 'missing_days')
 );
 GO
 
--- 2.5 g)
 CREATE PROC Submit_annual 
     @employee_ID INT, @replacement_emp INT, @start_date DATE, @end_date DATE
 AS
@@ -1015,7 +920,6 @@ BEGIN
 END;
 GO
 
--- 2.5 h)
 CREATE FUNCTION Status_leaves 
     (@employee_ID INT) 
 RETURNS TABLE 
@@ -1033,7 +937,6 @@ RETURN (
 );
 GO
 
--- 2.5 i)
 CREATE PROC Upperboard_approve_annual 
     @request_ID INT, @Upperboard_ID INT, @replacement_ID INT
 AS
@@ -1064,7 +967,6 @@ BEGIN
 END;
 GO
 
--- 2.5 j)
 CREATE PROC Submit_accidental
     @employee_ID INT,
     @start_date  DATE,
@@ -1108,7 +1010,6 @@ BEGIN
 END;
 GO
 
--- 2.5 k)
 CREATE PROC Submit_medical 
     @employee_ID INT,
     @start_date DATE,
@@ -1160,7 +1061,6 @@ BEGIN
 END;
 GO
 
--- 2.5 l)
 CREATE PROC Submit_unpaid 
     @employee_ID INT, 
     @start_date DATE, 
@@ -1214,7 +1114,6 @@ BEGIN
 END
 GO
 
--- 2.5 m)
 CREATE PROC Upperboard_approve_unpaids 
     @request_ID INT, @Upperboard_ID INT
 AS
@@ -1238,7 +1137,6 @@ BEGIN
 END;
 GO
 
--- 2.5 n)
 CREATE PROC Submit_compensation 
     @employee_ID INT, 
     @compensation_date DATE, 
@@ -1293,7 +1191,6 @@ BEGIN
 END;
 GO
 
--- 2.5 o)
 CREATE PROC Dean_andHR_Evaluation 
     @employee_ID INT, 
     @rating INT, 
@@ -1305,3 +1202,5 @@ BEGIN
     VALUES (@rating, @comment, @semester, @employee_ID);    
 END;
 GO
+
+
