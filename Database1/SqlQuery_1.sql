@@ -282,13 +282,37 @@ GO
 -- =======================================================================================
 -- 2.1.e Clear All Tables Procedure
 -- =======================================================================================
+-- 2.1.e Clear All Tables
 CREATE PROC clearAllTables
 AS
 BEGIN
-    EXEC sp_MSforeachtable 'ALTER TABLE ? NOCHECK CONSTRAINT ALL';
-    EXEC sp_MSforeachtable 'DELETE FROM ?';
-    EXEC sp_MSforeachtable 'ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL';
-    EXEC sp_MSforeachtable 'IF OBJECTPROPERTY(object_id(''?''), ''TableHasIdentity'') = 1 DBCC CHECKIDENT (''?'', RESEED, 0)';
+    -- 1. Delete from Child Tables (contain Foreign Keys)
+    DELETE FROM Employee_Approve_Leave;
+    DELETE FROM Employee_Replace_Employee;
+    DELETE FROM Performance;
+    DELETE FROM Deduction;
+    DELETE FROM Attendance;
+    DELETE FROM Payroll;
+    DELETE FROM Document;
+    DELETE FROM Compensation_Leave;
+    DELETE FROM Unpaid_Leave;
+    DELETE FROM Medical_Leave;
+    DELETE FROM Accidental_Leave;
+    DELETE FROM Annual_Leave;
+    
+    -- 2. Delete from "Middle" Tables (both Parent and Child)
+    DELETE FROM Leave;
+    DELETE FROM Role_existsIn_Department;
+    DELETE FROM Employee_Role;
+    DELETE FROM Employee_Phone;
+    
+    -- 3. Delete from Parent Tables (referenced by others)
+    DELETE FROM Employee;
+    DELETE FROM Role;
+    DELETE FROM Department;
+    
+    -- 4. Optional: Holiday table (if exists)
+    IF OBJECT_ID('Holiday', 'U') IS NOT NULL DELETE FROM Holiday;
 END;
 GO
 
