@@ -1,122 +1,18 @@
 ﻿-- =======================================================================================
 -- University HR Management System - Team 64
+-- Milestone 2 Implementation
 -- =======================================================================================
 
--- 1. Create Database
--- We check if it exists first to avoid errors.
-IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = 'University_HR_ManagementSystem_Team_64')
-BEGIN
-    CREATE DATABASE University_HR_ManagementSystem_Team_64;
-END
+-- 2.1.a Create Database
+CREATE DATABASE University_HR_ManagementSystem_Team_64;
 GO
 
 USE University_HR_ManagementSystem_Team_64;
 GO
 
 -- =======================================================================================
--- HELPER PROCEDURES (Drop & Clear)
--- We define these first so we can use them to reset the database state.
+-- 2.1.b Create All Tables Procedure
 -- =======================================================================================
-
--- 2.1.c Drop All Tables
--- Check if procedure exists, drop it if so, then create it.
-IF OBJECT_ID('dropAllTables') IS NOT NULL
-    DROP PROC dropAllTables;
-GO
-
-CREATE PROC dropAllTables
-AS
-BEGIN
-    -- Dropping tables in reverse order of dependencies
-    IF OBJECT_ID('Employee_Approve_Leave') IS NOT NULL DROP TABLE Employee_Approve_Leave;
-    IF OBJECT_ID('Employee_Replace_Employee') IS NOT NULL DROP TABLE Employee_Replace_Employee;
-    IF OBJECT_ID('Performance') IS NOT NULL DROP TABLE Performance;
-    IF OBJECT_ID('Deduction') IS NOT NULL DROP TABLE Deduction;
-    IF OBJECT_ID('Attendance') IS NOT NULL DROP TABLE Attendance;
-    IF OBJECT_ID('Payroll') IS NOT NULL DROP TABLE Payroll;
-    IF OBJECT_ID('Document') IS NOT NULL DROP TABLE Document;
-    IF OBJECT_ID('Compensation_Leave') IS NOT NULL DROP TABLE Compensation_Leave;
-    IF OBJECT_ID('Unpaid_Leave') IS NOT NULL DROP TABLE Unpaid_Leave;
-    IF OBJECT_ID('Medical_Leave') IS NOT NULL DROP TABLE Medical_Leave;
-    IF OBJECT_ID('Accidental_Leave') IS NOT NULL DROP TABLE Accidental_Leave;
-    IF OBJECT_ID('Annual_Leave') IS NOT NULL DROP TABLE Annual_Leave;
-    IF OBJECT_ID('Leave') IS NOT NULL DROP TABLE Leave;
-    IF OBJECT_ID('Role_existsIn_Department') IS NOT NULL DROP TABLE Role_existsIn_Department;
-    IF OBJECT_ID('Employee_Role') IS NOT NULL DROP TABLE Employee_Role;
-    IF OBJECT_ID('Role') IS NOT NULL DROP TABLE Role;
-    IF OBJECT_ID('Employee_Phone') IS NOT NULL DROP TABLE Employee_Phone;
-    IF OBJECT_ID('Employee') IS NOT NULL DROP TABLE Employee;
-    IF OBJECT_ID('Department') IS NOT NULL DROP TABLE Department;
-    IF OBJECT_ID('Holiday') IS NOT NULL DROP TABLE Holiday;
-END;
-GO
-
--- 2.1.d Drop All Procedures, Functions, Views
-IF OBJECT_ID('dropAllProceduresFunctionsViews') IS NOT NULL
-    DROP PROC dropAllProceduresFunctionsViews;
-GO
-
-CREATE PROC dropAllProceduresFunctionsViews
-AS
-BEGIN
-    DECLARE @sql NVARCHAR(MAX) = '';
-    
-    -- Drop Procedures
-    SELECT @sql = @sql + 'DROP PROCEDURE ' + QUOTENAME(name) + ';'
-    FROM sys.procedures 
-    WHERE type = 'P'
-      AND is_ms_shipped = 0
-      AND name != 'dropAllProceduresFunctionsViews'
-      AND name != 'dropAllTables' 
-      AND name != 'createAllTables'
-      AND name != 'clearAllTables'; 
-    
-    -- Drop Functions
-    SELECT @sql = @sql + 'DROP FUNCTION ' + QUOTENAME(name) + ';'
-    FROM sys.objects
-    WHERE type IN ('FN', 'IF', 'TF')
-      AND is_ms_shipped = 0;
-    
-    -- Drop Views
-    SELECT @sql = @sql + 'DROP VIEW ' + QUOTENAME(name) + ';'
-    FROM sys.views
-    WHERE is_ms_shipped = 0;
-    
-    IF @sql != ''
-        EXEC sp_executesql @sql;
-END;
-GO
-
--- 2.1.e Clear All Tables
-IF OBJECT_ID('clearAllTables') IS NOT NULL
-    DROP PROC clearAllTables;
-GO
-
-CREATE PROC clearAllTables
-AS
-BEGIN
-    EXEC sp_MSforeachtable 'ALTER TABLE ? NOCHECK CONSTRAINT ALL';
-    EXEC sp_MSforeachtable 'DELETE FROM ?';
-    EXEC sp_MSforeachtable 'ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL';
-    EXEC sp_MSforeachtable 'IF OBJECTPROPERTY(object_id(''?''), ''TableHasIdentity'') = 1 DBCC CHECKIDENT (''?'', RESEED, 0)';
-END;
-GO
-
--- =======================================================================================
--- EXECUTE CLEANUP 
--- This resets the database so the rest of the script runs without "Already Exists" errors.
--- =======================================================================================
-EXEC dropAllProceduresFunctionsViews;
-EXEC dropAllTables;
-GO
-
--- =======================================================================================
--- 2.1.b CREATE ALL TABLES
--- =======================================================================================
-IF OBJECT_ID('createAllTables') IS NOT NULL
-    DROP PROC createAllTables;
-GO
-
 CREATE PROC createAllTables
 AS
 BEGIN
@@ -254,7 +150,7 @@ BEGIN
     CREATE TABLE Payroll (
         ID INT IDENTITY(1,1) PRIMARY KEY,
         payment_date DATE,
-        final_salary_amount DECIMAL(10,1),
+        final_salary_amount DECIMAL(10,1), 
         from_date DATE,
         to_date DATE,
         comments VARCHAR(150),
@@ -320,27 +216,92 @@ BEGIN
 END;
 GO
 
--- Execute createAllTables immediately so tables exist for the rest of the script
+-- Execute createAllTables immediately to create the structure
 EXEC createAllTables;
 GO
 
 -- =======================================================================================
--- 2.2 Views (Data Retrieval)
+-- 2.1.c Drop All Tables Procedure
 -- =======================================================================================
-
--- 2.2 a) Fetch details for all employees
-IF OBJECT_ID('allEmployeeProfiles') IS NOT NULL DROP VIEW allEmployeeProfiles;
+CREATE PROC dropAllTables
+AS
+BEGIN
+    DROP TABLE Employee_Approve_Leave;
+    DROP TABLE Employee_Replace_Employee;
+    DROP TABLE Performance;
+    DROP TABLE Deduction;
+    DROP TABLE Attendance;
+    DROP TABLE Payroll;
+    DROP TABLE Document;
+    DROP TABLE Compensation_Leave;
+    DROP TABLE Unpaid_Leave;
+    DROP TABLE Medical_Leave;
+    DROP TABLE Accidental_Leave;
+    DROP TABLE Annual_Leave;
+    DROP TABLE Leave;
+    DROP TABLE Role_existsIn_Department;
+    DROP TABLE Employee_Role;
+    DROP TABLE Role;
+    DROP TABLE Employee_Phone;
+    DROP TABLE Employee;
+    DROP TABLE Department;
+    -- Check if holiday exists before dropping as it is created optionally later
+    IF OBJECT_ID('Holiday', 'U') IS NOT NULL DROP TABLE Holiday;
+END;
 GO
 
+-- =======================================================================================
+-- 2.1.d Drop All Procedures, Functions, Views Procedure
+-- =======================================================================================
+CREATE PROC dropAllProceduresFunctionsViews
+AS
+BEGIN
+    DECLARE @sql NVARCHAR(MAX) = '';
+    
+    SELECT @sql = @sql + 'DROP PROCEDURE ' + QUOTENAME(name) + ';'
+    FROM sys.procedures 
+    WHERE type = 'P'
+      AND is_ms_shipped = 0
+      AND name != 'dropAllProceduresFunctionsViews';
+    
+    SELECT @sql = @sql + 'DROP FUNCTION ' + QUOTENAME(name) + ';'
+    FROM sys.objects
+    WHERE type IN ('FN', 'IF', 'TF')
+      AND is_ms_shipped = 0;
+    
+    SELECT @sql = @sql + 'DROP VIEW ' + QUOTENAME(name) + ';'
+    FROM sys.views
+    WHERE is_ms_shipped = 0;
+    
+    IF @sql != ''
+        EXEC sp_executesql @sql;
+END;
+GO
+
+-- =======================================================================================
+-- 2.1.e Clear All Tables Procedure
+-- =======================================================================================
+CREATE PROC clearAllTables
+AS
+BEGIN
+    EXEC sp_MSforeachtable 'ALTER TABLE ? NOCHECK CONSTRAINT ALL';
+    EXEC sp_MSforeachtable 'DELETE FROM ?';
+    EXEC sp_MSforeachtable 'ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL';
+    EXEC sp_MSforeachtable 'IF OBJECTPROPERTY(object_id(''?''), ''TableHasIdentity'') = 1 DBCC CHECKIDENT (''?'', RESEED, 0)';
+END;
+GO
+
+-- =======================================================================================
+-- 2.2 Views
+-- =======================================================================================
+
+-- 2.2 a)
 CREATE VIEW allEmployeeProfiles AS
 SELECT employee_ID, first_name, last_name, gender, email, address, years_of_experience, official_day_off, type_of_contract, employment_status, annual_balance, accidental_balance 
 FROM Employee;
 GO
 
--- 2.2 b) Fetch the number of employees per department
-IF OBJECT_ID('NoEmployeeDept') IS NOT NULL DROP VIEW NoEmployeeDept;
-GO
-
+-- 2.2 b)
 CREATE VIEW NoEmployeeDept AS
 SELECT D.name AS department_name, COUNT(E.employee_ID) AS number_of_employees 
 FROM Employee E 
@@ -348,10 +309,7 @@ RIGHT OUTER JOIN Department D ON E.dept_name = D.name
 GROUP BY D.name;
 GO
 
--- 2.2 c) Fetch details for the performance of all employees in all Winter semesters
-IF OBJECT_ID('allPerformance') IS NOT NULL DROP VIEW allPerformance;
-GO
-
+-- 2.2 c)
 CREATE VIEW allPerformance AS
 SELECT P.performance_ID, P.rating, P.comments, P.semester, E.employee_ID, E.first_name, E.last_name, E.dept_name 
 FROM Performance P 
@@ -359,10 +317,7 @@ INNER JOIN Employee E ON P.emp_ID = E.employee_ID
 WHERE P.semester LIKE 'W%';
 GO
 
--- 2.2 d) Fetch details of all rejected medical leaves
-IF OBJECT_ID('allRejectedMedicals') IS NOT NULL DROP VIEW allRejectedMedicals;
-GO
-
+-- 2.2 d)
 CREATE VIEW allRejectedMedicals AS
 SELECT ML.request_ID, ML.type, ML.insurance_status, ML.disability_details, L.start_date, L.end_date, L.num_days, L.date_of_request, E.employee_ID, E.first_name, E.last_name, E.dept_name 
 FROM Medical_Leave ML 
@@ -371,10 +326,7 @@ INNER JOIN Employee E ON ML.Emp_ID = E.employee_ID
 WHERE L.final_approval_status = 'rejected';
 GO
 
--- 2.2 e) Fetch attendance records for all employees for yesterday
-IF OBJECT_ID('allEmployeeAttendance') IS NOT NULL DROP VIEW allEmployeeAttendance;
-GO
-
+-- 2.2 e)
 CREATE VIEW allEmployeeAttendance AS
 SELECT A.attendance_ID, A.date, A.check_in_time, A.check_out_time, A.total_duration, A.status, E.employee_ID, E.first_name, E.last_name, E.dept_name, E.type_of_contract 
 FROM Attendance A 
@@ -383,218 +335,8 @@ WHERE A.date = DATEADD(day, -1, CAST(GETDATE() AS DATE));
 GO
 
 -- =======================================================================================
--- 2.3 Admin Procedures
+-- 2.5 f) Function Is_On_Leave (Created early as 2.3.c depends on it)
 -- =======================================================================================
-
--- 2.3 a) Update status of expired documents
-IF OBJECT_ID('Update_Status_Doc') IS NOT NULL DROP PROC Update_Status_Doc;
-GO
-
-CREATE PROC Update_Status_Doc
-AS
-BEGIN
-    UPDATE Document 
-    SET status = 'expired' 
-    WHERE expiry_date < CAST(GETDATE() AS DATE) 
-    AND status = 'valid';
-END;
-GO
-
--- 2.3 b) Remove deductions of resigned employees
-IF OBJECT_ID('Remove_Deductions') IS NOT NULL DROP PROC Remove_Deductions;
-GO
-
-CREATE PROC Remove_Deductions
-AS
-BEGIN
-    DELETE FROM Deduction 
-    WHERE emp_ID IN (
-        SELECT employee_ID 
-        FROM Employee 
-        WHERE employment_status = 'resigned'
-    );
-END;
-GO
-
--- 2.3 d) Create Holiday table (Lookup table)
-IF OBJECT_ID('Create_Holiday') IS NOT NULL DROP PROC Create_Holiday;
-GO
-
-CREATE PROC Create_Holiday
-AS
-BEGIN
-    IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Holiday')
-    BEGIN
-        CREATE TABLE Holiday (
-            holiday_id INT IDENTITY(1,1) PRIMARY KEY,
-            name VARCHAR(50),
-            from_date DATE,
-            to_date DATE
-        );
-    END
-END;
-GO
-
--- 2.3 e) Add a new official holiday
-IF OBJECT_ID('Add_Holiday') IS NOT NULL DROP PROC Add_Holiday;
-GO
-
-CREATE PROC Add_Holiday
-    @holiday_name VARCHAR(50),
-    @from_date DATE,
-    @to_date DATE
-AS
-BEGIN
-    INSERT INTO Holiday (name, from_date, to_date)
-    VALUES (@holiday_name, @from_date, @to_date);
-END;
-GO
-
--- 2.3 f) Initiate attendance records for current day
-IF OBJECT_ID('Intitiate_Attendance') IS NOT NULL DROP PROC Intitiate_Attendance;
-GO
-
-CREATE PROC Intitiate_Attendance
-AS
-BEGIN
-    INSERT INTO Attendance (date, check_in_time, check_out_time, status, emp_ID)
-    SELECT 
-        CAST(GETDATE() AS DATE),
-        NULL,
-        NULL,
-        'Absent',
-        employee_ID
-    FROM Employee 
-    WHERE employment_status = 'active';
-END;
-GO
-
--- 2.3 g) Update attendance record for current day
-IF OBJECT_ID('Update_Attendance') IS NOT NULL DROP PROC Update_Attendance;
-GO
-
-CREATE PROC Update_Attendance
-    @Employee_id INT,
-    @check_in_time TIME,
-    @check_out_time TIME
-AS
-BEGIN
-    DECLARE @total_duration INT;
-    DECLARE @status VARCHAR(50);
-    
-    SET @total_duration = DATEDIFF(HOUR, @check_in_time, @check_out_time);
-    
-    IF @total_duration > 0
-        SET @status = 'attended';
-    ELSE
-        SET @status = 'Absent';
-    
-    UPDATE Attendance 
-    SET 
-        check_in_time = @check_in_time,
-        check_out_time = @check_out_time,
-        status = @status
-    WHERE emp_ID = @Employee_id 
-    AND date = CAST(GETDATE() AS DATE);
-END;
-GO
-
--- 2.3 h) Remove attendance records for holidays
-IF OBJECT_ID('Remove_Holiday') IS NOT NULL DROP PROC Remove_Holiday;
-GO
-
-CREATE PROC Remove_Holiday
-AS
-BEGIN
-    IF OBJECT_ID('Holiday', 'U') IS NOT NULL
-    BEGIN
-        DELETE FROM Attendance
-        WHERE date IN (
-            SELECT DISTINCT a.date
-            FROM Attendance a
-            INNER JOIN Holiday h ON a.date BETWEEN h.from_date AND h.to_date
-        );
-    END
-END;
-GO
-
--- 2.3 i) Remove unattended dayoff
-IF OBJECT_ID('Remove_DayOff') IS NOT NULL DROP PROC Remove_DayOff;
-GO
-
-CREATE PROC Remove_DayOff
-    @Employee_id INT
-AS
-BEGIN
-    DECLARE @current_date DATE = GETDATE();
-    DECLARE @month_start DATE = DATEFROMPARTS(YEAR(@current_date), MONTH(@current_date), 1);
-    
-    DELETE FROM Attendance
-    WHERE emp_ID = @Employee_id
-      AND date >= @month_start
-      AND date <= @current_date
-      AND status = 'absent'
-      AND DATENAME(WEEKDAY, date) = (
-          SELECT official_day_off 
-          FROM Employee 
-          WHERE employee_ID = @Employee_id
-      );
-END;
-GO
-
--- 2.3 j) Remove approved leaves from attendance
-IF OBJECT_ID('Remove_Approved_Leaves') IS NOT NULL DROP PROC Remove_Approved_Leaves;
-GO
-
-CREATE PROC Remove_Approved_Leaves
-    @Employee_id INT
-AS
-BEGIN
-    DELETE FROM Attendance
-    WHERE emp_ID = @Employee_id
-      AND EXISTS (
-          SELECT 1 
-          FROM Leave l
-          WHERE l.final_approval_status = 'approved'
-            AND l.start_date <= Attendance.date
-            AND l.end_date >= Attendance.date
-            AND l.request_ID IN (
-                SELECT request_ID FROM Annual_Leave WHERE emp_ID = @Employee_id
-                UNION ALL
-                SELECT request_ID FROM Accidental_Leave WHERE emp_ID = @Employee_id  
-                UNION ALL
-                SELECT request_ID FROM Medical_Leave WHERE Emp_ID = @Employee_id
-                UNION ALL
-                SELECT request_ID FROM Unpaid_Leave WHERE Emp_ID = @Employee_id
-                UNION ALL
-                SELECT request_ID FROM Compensation_Leave WHERE emp_ID = @Employee_id
-            )
-      );
-END;
-GO
-
--- 2.3 k) Replace employee
-IF OBJECT_ID('Replace_employee') IS NOT NULL DROP PROC Replace_employee;
-GO
-
-CREATE PROC Replace_employee
-    @Emp1_ID INT,
-    @Emp2_ID INT, 
-    @from_date DATE,
-    @to_date DATE
-AS
-BEGIN
-    INSERT INTO Employee_Replace_Employee (Emp1_ID, Emp2_ID, from_date, to_date)
-    VALUES (@Emp1_ID, @Emp2_ID, @from_date, @to_date);
-END;
-GO
-
--- =======================================================================================
--- 2.5 f) Function: Is_On_Leave (Defined here because 2.3.c needs it)
--- =======================================================================================
-IF OBJECT_ID('Is_On_Leave') IS NOT NULL DROP FUNCTION Is_On_Leave;
-GO
-
 CREATE FUNCTION Is_On_Leave 
     (@employee_ID INT, @from_date DATE, @to_date DATE) 
 RETURNS BIT
@@ -623,10 +365,35 @@ BEGIN
 END;
 GO
 
--- 2.3 c) Update Employment Status (Requires Is_On_Leave)
-IF OBJECT_ID('Update_Employment_Status') IS NOT NULL DROP PROC Update_Employment_Status;
+-- =======================================================================================
+-- 2.3 Admin Procedures
+-- =======================================================================================
+
+-- 2.3 a)
+CREATE PROC Update_Status_Doc
+AS
+BEGIN
+    UPDATE Document 
+    SET status = 'expired' 
+    WHERE expiry_date < CAST(GETDATE() AS DATE) 
+    AND status = 'valid';
+END;
 GO
 
+-- 2.3 b)
+CREATE PROC Remove_Deductions
+AS
+BEGIN
+    DELETE FROM Deduction 
+    WHERE emp_ID IN (
+        SELECT employee_ID 
+        FROM Employee 
+        WHERE employment_status = 'resigned'
+    );
+END;
+GO
+
+-- 2.3 c)
 CREATE PROC Update_Employment_Status
     @Employee_ID INT
 AS
@@ -650,14 +417,161 @@ BEGIN
 END;
 GO
 
--- =======================================================================================
--- 2.4 HR Employee Procedures
--- =======================================================================================
-
--- 2.4 a) HR Login Validation
-IF OBJECT_ID('HRLoginValidation') IS NOT NULL DROP FUNCTION HRLoginValidation;
+-- 2.3 d)
+CREATE PROC Create_Holiday
+AS
+BEGIN
+    CREATE TABLE Holiday (
+        holiday_id INT IDENTITY(1,1) PRIMARY KEY,
+        name VARCHAR(50),
+        from_date DATE,
+        to_date DATE
+    );
+END;
 GO
 
+-- 2.3 e)
+CREATE PROC Add_Holiday
+    @holiday_name VARCHAR(50),
+    @from_date DATE,
+    @to_date DATE
+AS
+BEGIN
+    INSERT INTO Holiday (name, from_date, to_date)
+    VALUES (@holiday_name, @from_date, @to_date);
+END;
+GO
+
+-- 2.3 f)
+CREATE PROC Intitiate_Attendance
+AS
+BEGIN
+    INSERT INTO Attendance (date, check_in_time, check_out_time, status, emp_ID)
+    SELECT 
+        CAST(GETDATE() AS DATE),
+        NULL,
+        NULL,
+        'Absent',
+        employee_ID
+    FROM Employee 
+    WHERE employment_status = 'active';
+END;
+GO
+
+-- 2.3 g)
+CREATE PROC Update_Attendance
+    @Employee_id INT,
+    @check_in_time TIME,
+    @check_out_time TIME
+AS
+BEGIN
+    DECLARE @total_duration INT;
+    DECLARE @status VARCHAR(50);
+    
+    SET @total_duration = DATEDIFF(HOUR, @check_in_time, @check_out_time);
+    
+    IF @total_duration > 0
+        SET @status = 'attended';
+    ELSE
+        SET @status = 'Absent';
+    
+    UPDATE Attendance 
+    SET 
+        check_in_time = @check_in_time,
+        check_out_time = @check_out_time,
+        status = @status
+    WHERE emp_ID = @Employee_id 
+    AND date = CAST(GETDATE() AS DATE);
+END;
+GO
+
+-- 2.3 h)
+CREATE PROC Remove_Holiday
+AS
+BEGIN
+    IF OBJECT_ID('Holiday', 'U') IS NOT NULL
+    BEGIN
+        DELETE FROM Attendance
+        WHERE date IN (
+            SELECT DISTINCT a.date
+            FROM Attendance a
+            INNER JOIN Holiday h ON a.date BETWEEN h.from_date AND h.to_date
+        );
+    END
+    ELSE
+    BEGIN
+        PRINT 'Holiday table does not exist. Please create it first using Create_Holiday procedure.';
+    END
+END;
+GO
+
+-- 2.3 i)
+CREATE PROC Remove_DayOff
+    @Employee_id INT
+AS
+BEGIN
+    DECLARE @current_date DATE = GETDATE();
+    DECLARE @month_start DATE = DATEFROMPARTS(YEAR(@current_date), MONTH(@current_date), 1);
+    
+    DELETE FROM Attendance
+    WHERE emp_ID = @Employee_id
+      AND date >= @month_start
+      AND date <= @current_date
+      AND status = 'absent'
+      AND DATENAME(WEEKDAY, date) = (
+          SELECT official_day_off 
+          FROM Employee 
+          WHERE employee_ID = @Employee_id
+      );
+END;
+GO
+
+-- 2.3 j)
+CREATE PROC Remove_Approved_Leaves
+    @Employee_id INT
+AS
+BEGIN
+    DELETE FROM Attendance
+    WHERE emp_ID = @Employee_id
+      AND EXISTS (
+          SELECT 1 
+          FROM Leave l
+          WHERE l.final_approval_status = 'approved'
+            AND l.start_date <= Attendance.date
+            AND l.end_date >= Attendance.date
+            AND l.request_ID IN (
+                SELECT request_ID FROM Annual_Leave WHERE emp_ID = @Employee_id
+                UNION ALL
+                SELECT request_ID FROM Accidental_Leave WHERE emp_ID = @Employee_id  
+                UNION ALL
+                SELECT request_ID FROM Medical_Leave WHERE Emp_ID = @Employee_id
+                UNION ALL
+                SELECT request_ID FROM Unpaid_Leave WHERE Emp_ID = @Employee_id
+                UNION ALL
+                SELECT request_ID FROM Compensation_Leave WHERE emp_ID = @Employee_id
+            )
+      );
+END;
+GO
+
+-- 2.3 k)
+CREATE PROC Replace_employee
+    @Emp1_ID INT,
+    @Emp2_ID INT, 
+    @from_date DATE,
+    @to_date DATE
+AS
+BEGIN
+    INSERT INTO Employee_Replace_Employee (Emp1_ID, Emp2_ID, from_date, to_date)
+    VALUES (@Emp1_ID, @Emp2_ID, @from_date, @to_date);
+END;
+GO
+
+-- =======================================================================================
+-- 2.4 HR Procedures
+-- =======================================================================================
+
+-- 2.4 a)
 CREATE FUNCTION HRLoginValidation 
     (@employee_ID INT, @password VARCHAR(50))
 RETURNS BIT
@@ -678,10 +592,7 @@ BEGIN
 END;
 GO
 
--- 2.4 b) Approve/Reject Annual/Accidental Leaves
-IF OBJECT_ID('HR_approval_an_acc') IS NOT NULL DROP PROC HR_approval_an_acc;
-GO
-
+-- 2.4 b)
 CREATE PROC HR_approval_an_acc 
     @request_ID INT, @HR_ID INT
 AS
@@ -689,7 +600,6 @@ BEGIN
     DECLARE @emp_ID INT, @num_days INT, @annual_bal INT, @accidental_bal INT;
     DECLARE @leave_type VARCHAR(20) = NULL;
     
-    -- Check if it is Annual Leave
     SELECT @emp_ID = AL.emp_ID, @num_days = L.num_days, 
            @annual_bal = E.annual_balance, @accidental_bal = E.accidental_balance,
            @leave_type = 'annual'
@@ -698,7 +608,6 @@ BEGIN
     INNER JOIN Employee E ON AL.emp_ID = E.employee_ID 
     WHERE L.request_ID = @request_ID;
 
-    -- Check if it is Accidental Leave
     IF @emp_ID IS NULL
     BEGIN
         SELECT @emp_ID = ACL.emp_ID, @num_days = L.num_days, 
@@ -741,31 +650,15 @@ BEGIN
 END;
 GO
 
--- 2.4 c) Approve/Reject Unpaid Leaves
-IF OBJECT_ID('HR_approval_unpaid') IS NOT NULL DROP PROC HR_approval_unpaid;
-GO
-
+-- 2.4 c)
 CREATE PROC HR_approval_unpaid 
     @request_ID INT, @HR_ID INT
 AS
 BEGIN
     DECLARE @emp_ID INT, @num_days INT, @contract_type VARCHAR(50), @approved_unpaid_count INT;
-    
-    SELECT @emp_ID = ul.Emp_ID, @num_days = l.num_days 
-    FROM Leave l 
-    INNER JOIN Unpaid_Leave ul ON l.request_ID = ul.request_ID 
-    WHERE l.request_ID = @request_ID;
-    
-    SELECT @contract_type = type_of_contract 
-    FROM Employee 
-    WHERE employee_ID = @emp_ID;
-    
-    SELECT @approved_unpaid_count = COUNT(*) 
-    FROM Leave l 
-    INNER JOIN Unpaid_Leave ul ON l.request_ID = ul.request_ID 
-    WHERE ul.Emp_ID = @emp_ID 
-      AND l.final_approval_status = 'approved' 
-      AND YEAR(l.start_date) = YEAR(GETDATE());
+    SELECT @emp_ID = ul.Emp_ID, @num_days = l.num_days FROM Leave l INNER JOIN Unpaid_Leave ul ON l.request_ID = ul.request_ID WHERE l.request_ID = @request_ID;
+    SELECT @contract_type = type_of_contract FROM Employee WHERE employee_ID = @emp_ID;
+    SELECT @approved_unpaid_count = COUNT(*) FROM Leave l INNER JOIN Unpaid_Leave ul ON l.request_ID = ul.request_ID WHERE ul.Emp_ID = @emp_ID AND l.final_approval_status = 'approved' AND YEAR(l.start_date) = YEAR(GETDATE());
 
     IF @contract_type = 'part_time' OR @num_days > 30 OR @approved_unpaid_count > 0
         UPDATE Leave SET final_approval_status = 'rejected' WHERE request_ID = @request_ID;
@@ -774,20 +667,14 @@ BEGIN
 END;
 GO
 
--- 2.4 d) Approve/Reject Compensation Leaves
-IF OBJECT_ID('HR_approval_comp') IS NOT NULL DROP PROC HR_approval_comp;
-GO
-
+-- 2.4 d)
 CREATE PROC HR_approval_comp 
     @request_ID INT, @HR_ID INT
 AS
 BEGIN
     DECLARE @emp_ID INT, @original_date DATE, @req_date DATE;
-    
     SELECT @emp_ID = cl.emp_ID, @original_date = cl.date_of_original_workday, @req_date = l.date_of_request
-    FROM Compensation_Leave cl 
-    INNER JOIN Leave l ON cl.request_ID = l.request_ID 
-    WHERE cl.request_ID = @request_ID;
+    FROM Compensation_Leave cl INNER JOIN Leave l ON cl.request_ID = l.request_ID WHERE cl.request_ID = @request_ID;
 
     IF MONTH(@original_date) != MONTH(@req_date) OR YEAR(@original_date) != YEAR(@req_date)
     BEGIN
@@ -802,10 +689,7 @@ BEGIN
 END;
 GO
 
--- 2.4 e) Add Deduction for Missing Hours
-IF OBJECT_ID('Deduction_hours') IS NOT NULL DROP PROC Deduction_hours;
-GO
-
+-- 2.4 e)
 CREATE PROC Deduction_hours 
     @employee_ID INT
 AS
@@ -841,10 +725,7 @@ BEGIN
 END;
 GO
 
--- 2.4 f) Add Deduction for Missing Days
-IF OBJECT_ID('Deduction_days') IS NOT NULL DROP PROC Deduction_days;
-GO
-
+-- 2.4 f)
 CREATE PROC Deduction_days 
     @employee_ID INT
 AS
@@ -884,10 +765,7 @@ BEGIN
 END;
 GO
 
--- 2.4 g) Add Deduction for Unpaid Leave
-IF OBJECT_ID('Deduction_unpaid') IS NOT NULL DROP PROC Deduction_unpaid;
-GO
-
+-- 2.4 g)
 CREATE PROC Deduction_unpaid 
     @employee_ID INT
 AS
@@ -897,7 +775,6 @@ BEGIN
     DECLARE @prev_month_start DATE = DATEADD(MONTH, -1, @current_month_start);
     DECLARE @prev_month_end DATE = DATEADD(DAY, -1, @current_month_start);
     
-    -- Previous Month Deduction
     INSERT INTO Deduction (emp_ID, date, amount, type, status, unpaid_ID)
     SELECT ul.Emp_ID, @prev_month_end, 0, 'unpaid', 'pending', ul.request_ID
     FROM Unpaid_Leave ul 
@@ -915,7 +792,6 @@ BEGIN
             AND YEAR(d.date) = YEAR(@prev_month_start)
       );
     
-    -- Current Month Deduction
     INSERT INTO Deduction (emp_ID, date, amount, type, status, unpaid_ID)
     SELECT ul.Emp_ID, @current_date, 0, 'unpaid', 'pending', ul.request_ID
     FROM Unpaid_Leave ul 
@@ -935,10 +811,7 @@ BEGIN
 END;
 GO
 
--- 2.4 h) Calculate Bonus Amount (Function)
-IF OBJECT_ID('Bonus_amount') IS NOT NULL DROP FUNCTION Bonus_amount;
-GO
-
+-- 2.4 h)
 CREATE FUNCTION Bonus_amount
     (@employee_ID INT) 
 RETURNS DECIMAL(10,2)
@@ -974,10 +847,7 @@ BEGIN
 END;
 GO
 
--- 2.4 i) Generate Monthly Payroll
-IF OBJECT_ID('Add_Payroll') IS NOT NULL DROP PROC Add_Payroll;
-GO
-
+-- 2.4 i)
 CREATE PROC Add_Payroll 
     @employee_ID INT, 
     @from_date DATE, 
@@ -1016,10 +886,7 @@ GO
 -- 2.5 Employee Procedures
 -- =======================================================================================
 
--- 2.5 a) Employee Login Validation
-IF OBJECT_ID('EmployeeLoginValidation') IS NOT NULL DROP FUNCTION EmployeeLoginValidation;
-GO
-
+-- 2.5 a)
 CREATE FUNCTION EmployeeLoginValidation 
     (@employee_ID INT, @password VARCHAR(50)) 
 RETURNS BIT
@@ -1032,10 +899,7 @@ BEGIN
 END;
 GO
 
--- 2.5 b) Retrieve my performance (Table Valued Function)
-IF OBJECT_ID('MyPerformance') IS NOT NULL DROP FUNCTION MyPerformance;
-GO
-
+-- 2.5 b)
 CREATE FUNCTION MyPerformance 
     (@employee_ID INT, @semester CHAR(3)) 
 RETURNS TABLE 
@@ -1047,10 +911,7 @@ RETURN (
 );
 GO
 
--- 2.5 c) Retrieve attendance records (Table Valued Function)
-IF OBJECT_ID('MyAttendance') IS NOT NULL DROP FUNCTION MyAttendance;
-GO
-
+-- 2.5 c)
 CREATE FUNCTION MyAttendance 
     (@employee_ID INT) 
 RETURNS TABLE 
@@ -1066,10 +927,7 @@ RETURN (
 );
 GO
 
--- 2.5 d) Retrieve last month's payroll (Table Valued Function)
-IF OBJECT_ID('Last_month_payroll') IS NOT NULL DROP FUNCTION Last_month_payroll;
-GO
-
+-- 2.5 d)
 CREATE FUNCTION Last_month_payroll 
     (@employee_ID INT) 
 RETURNS TABLE 
@@ -1083,10 +941,7 @@ RETURN (
 );
 GO
 
--- 2.5 e) Fetch all deductions (Table Valued Function)
-IF OBJECT_ID('Deductions_Attendance') IS NOT NULL DROP FUNCTION Deductions_Attendance;
-GO
-
+-- 2.5 e)
 CREATE FUNCTION Deductions_Attendance 
     (@employee_ID INT, @target_month INT) 
 RETURNS TABLE 
@@ -1101,10 +956,7 @@ RETURN (
 );
 GO
 
--- 2.5 g) Apply for Annual Leave
-IF OBJECT_ID('Submit_annual') IS NOT NULL DROP PROC Submit_annual;
-GO
-
+-- 2.5 g)
 CREATE PROC Submit_annual 
     @employee_ID INT, @replacement_emp INT, @start_date DATE, @end_date DATE
 AS
@@ -1138,10 +990,7 @@ BEGIN
 END;
 GO
 
--- 2.5 h) Retrieve status of submitted leaves
-IF OBJECT_ID('Status_leaves') IS NOT NULL DROP FUNCTION Status_leaves;
-GO
-
+-- 2.5 h)
 CREATE FUNCTION Status_leaves 
     (@employee_ID INT) 
 RETURNS TABLE 
@@ -1159,10 +1008,7 @@ RETURN (
 );
 GO
 
--- 2.5 i) Upperboard approval for annual leaves
-IF OBJECT_ID('Upperboard_approve_annual') IS NOT NULL DROP PROC Upperboard_approve_annual;
-GO
-
+-- 2.5 i)
 CREATE PROC Upperboard_approve_annual 
     @request_ID INT, @Upperboard_ID INT, @replacement_ID INT
 AS
@@ -1193,10 +1039,7 @@ BEGIN
 END;
 GO
 
--- 2.5 j) Apply for Accidental Leave
-IF OBJECT_ID('Submit_accidental') IS NOT NULL DROP PROC Submit_accidental;
-GO
-
+-- 2.5 j)
 CREATE PROC Submit_accidental
     @employee_ID INT,
     @start_date  DATE,
@@ -1240,10 +1083,7 @@ BEGIN
 END;
 GO
 
--- 2.5 k) Apply for Medical Leave
-IF OBJECT_ID('Submit_medical') IS NOT NULL DROP PROC Submit_medical;
-GO
-
+-- 2.5 k)
 CREATE PROC Submit_medical 
     @employee_ID INT,
     @start_date DATE,
@@ -1295,10 +1135,7 @@ BEGIN
 END;
 GO
 
--- 2.5 l) Apply for Unpaid Leave
-IF OBJECT_ID('Submit_unpaid') IS NOT NULL DROP PROC Submit_unpaid;
-GO
-
+-- 2.5 l)
 CREATE PROC Submit_unpaid 
     @employee_ID INT, 
     @start_date DATE, 
@@ -1352,10 +1189,7 @@ BEGIN
 END
 GO
 
--- 2.5 m) Approve/Reject Unpaid Leaves (Upperboard)
-IF OBJECT_ID('Upperboard_approve_unpaids') IS NOT NULL DROP PROC Upperboard_approve_unpaids;
-GO
-
+-- 2.5 m)
 CREATE PROC Upperboard_approve_unpaids 
     @request_ID INT, @Upperboard_ID INT
 AS
@@ -1379,10 +1213,7 @@ BEGIN
 END;
 GO
 
--- 2.5 n) Apply for Compensation Leave
-IF OBJECT_ID('Submit_compensation') IS NOT NULL DROP PROC Submit_compensation;
-GO
-
+-- 2.5 n)
 CREATE PROC Submit_compensation 
     @employee_ID INT, 
     @compensation_date DATE, 
@@ -1437,10 +1268,7 @@ BEGIN
 END;
 GO
 
--- 2.5 o) Dean Evaluation
-IF OBJECT_ID('Dean_andHR_Evaluation') IS NOT NULL DROP PROC Dean_andHR_Evaluation;
-GO
-
+-- 2.5 o)
 CREATE PROC Dean_andHR_Evaluation 
     @employee_ID INT, 
     @rating INT, 
